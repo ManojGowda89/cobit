@@ -1,41 +1,26 @@
-import React, { useContext } from 'react';
-import { Box, Typography, Container, Link } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import React from 'react';
+import { Box, Container, Typography } from '@mui/material';
 
 const Footer = () => {
-  const theme = useTheme();
-  const currentDate = new Date().toISOString().split('T')[0];
+  const currentDate = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
 
   return (
     <Box
       component="footer"
       sx={{
-        py: 3,
-        px: 2,
+        py: 2,
         mt: 'auto',
-        backgroundColor: theme.palette.mode === 'light' 
-          ? theme.palette.grey[200] 
-          : theme.palette.grey[900],
+        backgroundColor: 'white',
+        boxShadow: '0 -4px 6px rgba(0, 0, 0, 0.05)'
       }}
     >
-      <Container maxWidth="lg">
-        <Typography 
-          variant="body2" 
-          color="text.secondary" 
-          align="center"
-        >
-          Last updated: {currentDate} | Developed by: {' '}
-          <Link 
-            color="inherit" 
-            href="mailto:mail@manojgowda.in"
-            underline="hover"
-          >
-            ManojGowda89
-          </Link>
+      <Container>
+        <Typography variant="body2" color="text.secondary" align="center">
+          Last updated: {currentDate} UTC | Developed by: ManojGowda89 mail@manojgowda.in
         </Typography>
       </Container>
     </Box>
   );
 };
 
-export default Footer;  
+export default Footer;

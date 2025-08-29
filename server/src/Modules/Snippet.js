@@ -49,10 +49,26 @@ const getSnippets = async (req, res) => {
 const getSnippetById = async (req, res) => {
   const { id } = req.params;
   try {
-    const snippet = await Snippet.findByPk(id);
+    const snippet = await Snippet.findByPk(id, {
+      attributes: { exclude: ["visibility"] }, // keep excluding visibility
+      raw: true, // flatten values instead of Sequelize instance
+    });
+
     if (!snippet) return res.status(404).json({ error: "Snippet not found" });
+
+    // Extract only what you need
+    const response = {
+      id: snippet.id,
+      title: snippet.title,
+      description: snippet.description,
+      code: snippet.code,
+      username: snippet.userInfo?.username || "Guest", // only username
+      createdAt: snippet.createdAt,
+      updatedAt: snippet.updatedAt,
+    };
+
     console.log("snippet fetched");
-    res.json(snippet);
+    res.json(response);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -72,12 +88,27 @@ const createSnippet = async (req, res) => {
 const updateSnippet = async (req, res) => {
   const { id } = req.params;
   const { title, description, code } = req.body;
+
   try {
     const snippet = await Snippet.findByPk(id);
+
     if (!snippet) return res.status(404).json({ error: "Snippet not found" });
+
     await snippet.update({ title, description, code });
+
+    // Shape response just like getSnippetById
+    const response = {
+      id: snippet.id,
+      title: snippet.title,
+      description: snippet.description,
+      code: snippet.code,
+      username: snippet.userInfo?.username || "Guest", // 👈 only username
+      createdAt: snippet.createdAt,
+      updatedAt: snippet.updatedAt,
+    };
+
     console.log("snippet updated");
-    res.json(snippet);
+    res.json(response);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

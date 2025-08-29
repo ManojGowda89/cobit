@@ -10,18 +10,38 @@ function generateUniqueId(length = 12) {
   return result;
 }
 
-const Snippet = sequelize.define("Snippet", {
-  id: {
-    type: DataTypes.STRING,
-    primaryKey: true,
-    defaultValue: () => generateUniqueId(Math.floor(Math.random() * (20 - 8 + 1)) + 8),
+const Snippet = sequelize.define(
+  "Snippet",
+  {
+    id: {
+      type: DataTypes.STRING,
+      primaryKey: true,
+      defaultValue: () =>
+        generateUniqueId(Math.floor(Math.random() * (20 - 8 + 1)) + 8), // random length between 8-20
+    },
+    title: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.STRING, allowNull: false },
+    code: { type: DataTypes.TEXT, allowNull: false },
+    visibility: {
+      // 👈 new field added
+      type: DataTypes.ENUM("public", "private"),
+      allowNull: false,
+      defaultValue: "public",
+    },
+    userInfo: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {
+        username: "Guest",
+        uid: () =>
+          generateUniqueId(Math.floor(Math.random() * (20 - 8 + 1)) + 8),
+      },
+    },
   },
-  title: { type: DataTypes.STRING, allowNull: false },
-  description: { type: DataTypes.STRING, allowNull: false },
-  code: { type: DataTypes.TEXT, allowNull: false },
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Sync table automatically
 (async () => {

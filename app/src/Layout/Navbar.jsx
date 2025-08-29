@@ -1,176 +1,182 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom'; // 1. Import hooks
 import { 
   AppBar, 
   Toolbar, 
   Typography, 
   Box, 
   Button, 
-  IconButton, 
-  InputBase, 
-  Drawer, 
-  List, 
-  ListItem, 
-  ListItemIcon, 
+  Container,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
   ListItemText,
-  styled,
-  alpha,
-  useMediaQuery
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { 
-  Menu as MenuIcon,
-  Search as SearchIcon,
-  Code as CodeIcon,
-  Add as AddIcon,
+  List as ListIcon, 
+  Add as AddIcon, 
   Terminal as TerminalIcon,
-  Folder as FolderIcon
+  Search as SearchIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 
-// Styled components
-const Search = styled('div')({
-  position: 'relative',
-  borderRadius: '4px',
-  backgroundColor: alpha('#fff', 0.15),
-  '&:hover': {
-    backgroundColor: alpha('#fff', 0.25),
-  },
-  marginLeft: 0,
-  width: '100%',
-  maxWidth: 300,
-});
+// 2. Remove currentView and onViewChange from props
+const Navbar = ({ isEditing }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-const SearchIconWrapper = styled('div')({
-  padding: '0 8px',
-  height: '100%',
-  position: 'absolute',
-  pointerEvents: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-});
-
-const StyledInputBase = styled(InputBase)({
-  color: 'inherit',
-  '& .MuiInputBase-input': {
-    padding: '8px 8px 8px 32px',
-    transition: 'width 0.3s',
-    width: '100%',
-  },
-});
-
-const NavButton = styled(Button)(({ active }) => ({
-  margin: '0 4px',
-  color: '#fff',
-  backgroundColor: active ? '#1976d2' : 'transparent',
-  '&:hover': {
-    backgroundColor: active ? '#1976d2' : alpha('#fff', 0.15),
-  },
-}));
-
-const Navbar = ({ isEditing, onSearchChange }) => {
+  // 3. Get router location and navigate function
+  const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMediaQuery('(max-width:960px)'); // hardcoded md breakpoint
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+    // Implement debounced search function here
+  };
 
   const toggleDrawer = (open) => (event) => {
-    if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) return;
+    if (
+      event.type === 'keydown' &&
+      (event.key === 'Tab' || event.key === 'Shift')
+    ) {
+      return;
+    }
     setDrawerOpen(open);
   };
 
+  // 4. Add 'path' property to align with your routes in App.jsx
   const navItems = [
-    { path: '/', label: 'Code', icon: <CodeIcon /> },
-    { path: '/add', label: 'Add Code', icon: <AddIcon /> },
-    { path: '/cli', label: 'CLI', icon: <TerminalIcon /> },
+    { id: 'code', label: 'Code', icon: <ListIcon />, path: '/' },
+    { id: 'add', label: 'Add Code', icon: <AddIcon />, path: '/add' },
+    { id: 'cli', label: 'CLI', icon: <TerminalIcon />, path: '/cli' }
   ];
 
-  const isActivePath = (path) => location.pathname === path;
-
-  const list = () => (
-    <Box
-      sx={{ width: 250 }}
-      role="presentation"
-      onClick={toggleDrawer(false)}
-      onKeyDown={toggleDrawer(false)}
-    >
-      <List>
-        {navItems.map((item) => (
-          <ListItem 
-            button 
-            key={item.path}
-            component={Link}
-            to={item.path}
-            selected={isActivePath(item.path)}
+  const renderNavButtons = () => (
+    <>
+      {navItems.map((item) => {
+        // 5. Check if the current URL pathname matches the item's path
+        const isActive = location.pathname === item.path;
+        return (
+          <Button
+            key={item.id}
+            startIcon={item.icon}
+            // 6. Use isActive for styling
+            color={isActive ? 'success' : 'inherit'}
+            sx={{
+              mx: 1,
+              borderRadius: 1,
+              backgroundColor: isActive ? 'success.main' : 'transparent',
+              color: isActive ? 'dark.main' : 'inherit',
+              '&:hover': {
+                backgroundColor: isActive ? 'success.light' : 'rgba(255, 255, 255, 0.08)'
+              }
+            }}
+            // 7. Use navigate function on click
+            onClick={() => navigate(item.path)}
           >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItem>
-        ))}
+            {item.label}
+          </Button>
+        );
+      })}
+    </>
+  );
+
+  const drawer = (
+    <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)} onKeyDown={toggleDrawer(false)}>
+      <List>
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <ListItem 
+              button 
+              key={item.id} 
+              // Use navigate here as well
+              onClick={() => navigate(item.path)}
+              // Use isActive for selected state
+              selected={isActive}
+              sx={{
+                borderRadius: 1,
+                m: 1,
+                backgroundColor: isActive ? 'success.light' : 'transparent',
+              }}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.label} />
+            </ListItem>
+          );
+        })}
       </List>
     </Box>
   );
 
   return (
     <>
-      <AppBar position="sticky" elevation={4} sx={{ backgroundColor: '#333' }}>
-        <Toolbar>
-          {isMobile && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={toggleDrawer(true)}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-          
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', fontWeight: 'bold' }}
-          >
-            <FolderIcon sx={{ mr: 1 }} />
-            cobit
-          </Typography>
-
-          {!isMobile && (
-            <Box sx={{ display: 'flex' }}>
-              {navItems.map((item) => (
-                <NavButton
-                  key={item.path}
-                  component={Link}
-                  to={item.path}
-                  startIcon={item.icon}
-                  active={isActivePath(item.path) ? 1 : 0}
-                >
-                  {item.label}
-                </NavButton>
-              ))}
-            </Box>
-          )}
-
-          {location.pathname === '/' && !isEditing && (
-            <Search>
-              <SearchIconWrapper>
-                <SearchIcon />
-              </SearchIconWrapper>
-              <StyledInputBase
-                placeholder="Search…"
-                inputProps={{ 'aria-label': 'search' }}
-                onChange={(e) => onSearchChange(e.target.value)}
-              />
-            </Search>
-          )}
-        </Toolbar>
+      <AppBar position="static" sx={{ backgroundColor: 'primary.main', boxShadow: 3, mb: 0 }}>
+        <Container>
+          <Toolbar>
+            <Typography variant="h4" component="div" sx={{ flexGrow: 1, textAlign: 'center' }}>
+              <Box component="span" sx={{ mr: 1 }}>📁</Box>
+              cobit
+            </Typography>
+          </Toolbar>
+        </Container>
       </AppBar>
-      
+
+      <Box sx={{ backgroundColor: 'white', boxShadow: 1, mb: 3 }}>
+        <Container>
+          <Toolbar>
+            {isMobile ? (
+              <>
+                <IconButton
+                  edge="start"
+                  color="inherit"
+                  aria-label="menu"
+                  onClick={toggleDrawer(true)}
+                >
+                  <MenuIcon />
+                </IconButton>
+                <Box sx={{ flexGrow: 1 }} />
+              </>
+            ) : (
+              <Box sx={{ display: 'flex', flexGrow: 1 }}>
+                {renderNavButtons()}
+              </Box>
+            )}
+
+            {location.pathname === '/' && !isEditing && ( // Show search only on the main page
+              <TextField
+                size="small"
+                placeholder="Search by title or description"
+                value={searchQuery}
+                onChange={handleSearch}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ ml: 2, width: { xs: '100%', sm: 'auto' } }}
+              />
+            )}
+          </Toolbar>
+        </Container>
+      </Box>
+
       <Drawer
         anchor="left"
         open={drawerOpen}
         onClose={toggleDrawer(false)}
       >
-        {list()}
+        {drawer}
       </Drawer>
     </>
   );
