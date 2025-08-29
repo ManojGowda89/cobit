@@ -22,7 +22,7 @@ import {
 import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { LoadingButton } from '@mui/lab';
 
-const API_URL = "http://localhost:3000/api/snippets";
+const API_URL = "/api/snippets";
 const SNIPPETS_PER_PAGE = 10;
 
 const SnippetList = ({ showToast }) => {

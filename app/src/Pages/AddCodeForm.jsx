@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import { Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
 
-const API_URL = "http://localhost:3000/api/snippets";
+const API_URL = "/api/snippets";
 
 const AddCodeForm = ({ onCancel, showToast }) => {
   const [formData, setFormData] = useState({

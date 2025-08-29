@@ -1,16 +1,22 @@
 
 import { Sequelize } from "sequelize";
 // Create sequelize instance outside the function
-const sequelize = new Sequelize(process.env.DB_URL, {
-  dialect: "postgres",
-  dialectOptions: {
+const databaseUrl =
+  process.env.NODE_ENV === 'production'
+    ? process.env.PROD_DB_URL  // Production environment
+    : process.env.LOCAL_DB_URL; // Local/development environment
+
+const sequelize = new Sequelize(databaseUrl, {
+  dialect: 'postgres',
+  dialectOptions: process.env.NODE_ENV === 'production' ? {
     ssl: {
       require: true,
       rejectUnauthorized: false,
     },
-  },
+  } : {}, // No SSL for local
   logging: false,
 });
+
 
 // Function to connect and sync
 function connectionToDb() {

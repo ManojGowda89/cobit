@@ -23,7 +23,7 @@ import { LoadingButton } from '@mui/lab';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
 
-const API_URL = "http://localhost:3000/api/snippets";
+const API_URL = "/api/snippets";
 
 const SnippetDetail = () => {
   const { id } = useParams();
