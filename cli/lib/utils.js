@@ -5,7 +5,7 @@ const COBIT_FILE = path.join(process.cwd(), '.cobit');
 
 function getApiBase() {
   // Allow override with env; default to your prod domain
-  return process.env.COBIT_API_BASE || 'https://cobit.manojgowda.in';
+  return process.env.COBIT_API_BASE || 'http://localhost:3000';
 }
 
 function getSnippetUrl(id) {

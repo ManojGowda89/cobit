@@ -2,7 +2,6 @@
 import { Sequelize } from "sequelize"
 import Snippet from "../Modals/Snippet.js"
 
-
 // --- Functions ---
 const getSnippets = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -17,6 +16,7 @@ const getSnippets = async (req, res) => {
       whereClause[Sequelize.Op.or] = [
         { title: { [Sequelize.Op.iLike]: `%${search}%` } },
         { description: { [Sequelize.Op.iLike]: `%${search}%` } },
+        { id: { [Sequelize.Op.iLike]: `%${search}%` } } // <-- search by ID
       ];
     }
 
@@ -29,6 +29,7 @@ const getSnippets = async (req, res) => {
       offset,
       attributes: { exclude: ["userInfo", "visibility"] },
     });
+
     console.log("snippets fetched");
     res.json({
       snippets,

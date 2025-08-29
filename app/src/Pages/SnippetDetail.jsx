@@ -10,15 +10,16 @@ import {
   Alert, 
   IconButton,
   Button,
-  TextField, // Added for editing
-  Stack        // Added for layout
+  TextField,
+  Stack
 } from '@mui/material';
 import { 
   ArrowBack as ArrowBackIcon, 
   ContentCopy as CopyIcon,
-  Edit as EditIcon,       // Added for Edit button
-  Save as SaveIcon        // Added for Save button
+  Edit as EditIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
+import { LoadingButton } from '@mui/lab';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
 
@@ -31,31 +32,35 @@ const SnippetDetail = () => {
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // ✅ NEW: State for managing edit mode
+  // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
   const [editedSnippet, setEditedSnippet] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    const fetchSnippetById = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const res = await fetch(`${API_URL}/${id}`);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch snippet. Status: ${res.status}`);
-        }
-        const data = await res.json();
-        setSnippet(data);
-        setEditedSnippet(data); // ✅ Initialize edited state
-      } catch (err) {
-        setError(err.message);
-        console.error('Error fetching snippet:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Refresh loader
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Fetch snippet function
+  const fetchSnippetById = async () => {
+    if (!loading) setIsRefreshing(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/${id}`);
+      if (!res.ok) throw new Error(`Failed to fetch snippet. Status: ${res.status}`);
+      const data = await res.json();
+      setSnippet(data);
+      setEditedSnippet(data); // Update edit state as well
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching snippet:', err);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Fetch snippet on mount
+  useEffect(() => {
     fetchSnippetById();
   }, [id]);
 
@@ -68,6 +73,7 @@ const SnippetDetail = () => {
     }
   }, [snippet, isEditing]);
 
+  // Copy code
   const copyCode = () => {
     if (snippet?.code) {
       navigator.clipboard.writeText(snippet.code);
@@ -75,42 +81,39 @@ const SnippetDetail = () => {
       setTimeout(() => setCopySuccess(false), 2000);
     }
   };
-  
-  // ✅ NEW: Handle input changes in edit mode
+
+  // Handle input changes in edit mode
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditedSnippet(prev => ({ ...prev, [name]: value }));
   };
 
-  // ✅ NEW: Handle saving the edited snippet
+  // Handle save
   const handleSave = async () => {
     setIsSaving(true);
     setError('');
     try {
-        const response = await fetch(`${API_URL}/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editedSnippet),
-        });
-        if (!response.ok) {
-            throw new Error(`Failed to update snippet. Status: ${response.status}`);
-        }
-        const updatedSnippet = await response.json();
-        setSnippet(updatedSnippet); // Update the main display
-        setIsEditing(false); // Exit edit mode
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editedSnippet),
+      });
+      if (!response.ok) throw new Error(`Failed to update snippet. Status: ${response.status}`);
+      const updatedSnippet = await response.json();
+      setSnippet(updatedSnippet);
+      setIsEditing(false);
     } catch (err) {
-        setError(err.message);
-        console.error('Error updating snippet:', err);
+      setError(err.message);
+      console.error('Error updating snippet:', err);
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
   const handleCancel = () => {
-      setEditedSnippet(snippet); // Revert changes
-      setIsEditing(false);
+    setEditedSnippet(snippet); // Revert changes
+    setIsEditing(false);
   };
-
 
   if (loading) {
     return (
@@ -120,42 +123,51 @@ const SnippetDetail = () => {
     );
   }
 
-  // Use a separate alert for save errors so fetch errors aren't overwritten
-  if (!snippet && error) {
-    return <Alert severity="error">Error: {error}</Alert>;
-  }
-
-  if (!snippet) {
-    return <Alert severity="info">Snippet not found.</Alert>;
-  }
+  if (!snippet && error) return <Alert severity="error">Error: {error}</Alert>;
+  if (!snippet) return <Alert severity="info">Snippet not found.</Alert>;
 
   return (
     <Paper elevation={3} sx={{ p: 4 }}>
-      {/* --- Header with Buttons --- */}
+      {/* Header */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Button component={RouterLink} to="/" startIcon={<ArrowBackIcon />}>
           Back to List
         </Button>
-        
-        {isEditing ? (
-            <Stack direction="row" spacing={1}>
-                <Button variant="outlined" color="secondary" onClick={handleCancel} disabled={isSaving}>
-                    Cancel
-                </Button>
-                <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save'}
-                </Button>
-            </Stack>
-        ) : (
+
+        <Stack direction="row" spacing={1}>
+          {/* Refresh Button with loader */}
+          <LoadingButton
+            variant="outlined"
+            onClick={fetchSnippetById}
+            loading={isRefreshing}
+          >
+            Refresh
+          </LoadingButton>
+
+          {isEditing ? (
+            <>
+              <Button variant="outlined" color="secondary" onClick={handleCancel} disabled={isSaving}>
+                Cancel
+              </Button>
+              <LoadingButton
+                variant="contained"
+                startIcon={<SaveIcon />}
+                loading={isSaving}
+                onClick={handleSave}
+              >
+                Save
+              </LoadingButton>
+            </>
+          ) : (
             <Button variant="contained" startIcon={<EditIcon />} onClick={() => setIsEditing(true)}>
-                Edit
+              Edit
             </Button>
-        )}
+          )}
+        </Stack>
       </Stack>
 
-      {/* --- Display or Edit Content --- */}
+      {/* Display / Edit */}
       {isEditing ? (
-        // ✅ EDITING VIEW
         <Stack spacing={3}>
           <TextField
             fullWidth
@@ -185,12 +197,10 @@ const SnippetDetail = () => {
           />
         </Stack>
       ) : (
-        // ✅ DISPLAY VIEW
         <>
           <Typography variant="h4" component="h1" gutterBottom>
             {snippet.title}
           </Typography>
-          
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             {snippet.description}
           </Typography>
@@ -211,9 +221,9 @@ const SnippetDetail = () => {
               <CopyIcon fontSize="small" />
             </IconButton>
             {copySuccess && (
-                <Typography sx={{ position: 'absolute', top: 12, right: 50, color: '#4cc9f0', fontSize: '0.8rem' }}>
-                    Copied!
-                </Typography>
+              <Typography sx={{ position: 'absolute', top: 12, right: 50, color: '#4cc9f0', fontSize: '0.8rem' }}>
+                Copied!
+              </Typography>
             )}
             <pre style={{ margin: 0, borderRadius: 8, overflow: 'auto' }}>
               <code className="language-javascript">{snippet.code}</code>
@@ -222,7 +232,6 @@ const SnippetDetail = () => {
         </>
       )}
 
-      {/* Display save errors here */}
       {error && !loading && <Alert severity="error" sx={{ mt: 3 }}>{error}</Alert>}
     </Paper>
   );
