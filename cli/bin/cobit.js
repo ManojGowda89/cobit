@@ -5,7 +5,7 @@ const { program } = require('commander');
 program
   .name('cobit')
   .description('Cobit CLI - simple snippet-based code keeper')
-  .version('1.3.1');
+  .version('2.0.0');
 
 program
   .command('init')

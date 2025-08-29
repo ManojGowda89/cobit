@@ -30,16 +30,24 @@ module.exports = async function clone(repoId) {
 
     // Update or create .cobit
     const cobitFilePath = path.join(repoPath, '.cobit');
-    let cobit = { id: repoId, staged: [], commits: [] };
+    let cobit = { id: repoId, staged: [filename], commits: [] };
 
     if (fs.existsSync(cobitFilePath)) {
       const existing = JSON.parse(fs.readFileSync(cobitFilePath, 'utf-8'));
-      cobit = { ...existing, id: repoId }; // keep existing staged/commits
+      cobit = { 
+        ...existing, 
+        id: repoId,
+        // Add the cloned file to staged if not already there
+        staged: existing.staged.includes(filename) 
+          ? existing.staged 
+          : [...existing.staged, filename]
+      };
     }
 
-    fs.writeFileSync(cobitFilePath, JSON.stringify(cobit, null, 2));
+    writeCobitFile(cobit);
 
     console.log(`✅ Cloned snippet ${repoId} into current folder: ${filename}`);
+    console.log(`✅ Added ${filename} to staged files`);
   } catch (err) {
     console.log('❌ Clone failed:', err.response?.data || err.message);
   }
