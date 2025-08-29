@@ -40,4 +40,9 @@ program
   .description('Show repo ID, staged files, and commits')
   .action(require('../lib/status'));
 
+program
+  .command('logout')
+  .description('Log out and remove stored authentication credentials')
+  .action(require('../lib/logout'));
+
 program.parse(process.argv);

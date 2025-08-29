@@ -1,25 +1,17 @@
-// redisClient.js
-import { createClient } from "redis";
+/**
+ * Redis Client replacement using in-memory Map
+ * 
+ * Current Date and Time: 2025-08-29 09:38:18 (UTC)
+ * User: ManojGowda89
+ */
 
-const REDIS_URL =
-  process.env.NODE_ENV === "production"
-    ? process.env.PROD_REDIS_URL
-    : process.env.LOCAL_REDIS_URL || "redis://localhost:6379";
-
-const client = createClient({
-  url: REDIS_URL,
-});
-
-client.on("error", (err) => console.error("Redis Client Error", err));
+const cache = new Map();
 
 /**
- * Connect to Redis
+ * Connect function (dummy for compatibility)
  */
 export const connectRedis = async () => {
-  if (!client.isOpen) {
-    await client.connect();
-    console.log("✅ Connected to Redis");
-  }
+  console.log("✅ Using in-memory Map cache (Redis disabled)");
 };
 
 /**
@@ -30,7 +22,10 @@ export const connectRedis = async () => {
  */
 export const set = async (key, value) => {
   const val = typeof value === "object" ? JSON.stringify(value) : value;
-  await client.set(key, val, { EX: 3600 }); // 1 hour expiry
+
+  // Store with expiry timestamp
+  const expiry = Date.now() + 3600 * 1000; // 1 hour
+  cache.set(key, { value: val, expiry });
 };
 
 /**
@@ -39,13 +34,19 @@ export const set = async (key, value) => {
  * @param {string} key 
  */
 export const get = async (key) => {
-  const val = await client.get(key);
-  if (!val) return null;
+  const entry = cache.get(key);
+  if (!entry) return null;
+
+  // Check expiry
+  if (Date.now() > entry.expiry) {
+    cache.delete(key);
+    return null;
+  }
 
   try {
-    return JSON.parse(val);
+    return JSON.parse(entry.value);
   } catch {
-    return val;
+    return entry.value;
   }
 };
 
@@ -54,10 +55,45 @@ export const get = async (key) => {
  * @param {string} key 
  */
 export const del = async (key) => {
-  await client.del(key);
+  cache.delete(key);
 };
 
 /**
- * Export the raw client if needed
+ * Scan for keys matching a pattern
+ * Simple implementation of scanIterator for in-memory Map
+ * @param {Object} options 
+ * @returns {AsyncIterator} iterator of matching keys
  */
+export const scanIterator = ({ MATCH }) => {
+  // Convert Redis glob pattern to RegExp
+  const pattern = MATCH.replace(/\*/g, '.*');
+  const regex = new RegExp(`^${pattern}$`);
+  
+  // Return an async generator that yields matching keys
+  return {
+    [Symbol.asyncIterator]() {
+      const keys = [...cache.keys()].filter(key => regex.test(key));
+      let index = 0;
+      
+      return {
+        async next() {
+          if (index < keys.length) {
+            return { value: keys[index++], done: false };
+          } else {
+            return { done: true };
+          }
+        }
+      };
+    }
+  };
+};
+
+// Create client object with all methods for compatibility
+const client = {
+  scanIterator,
+  del,
+  // Add any other methods that might be accessed directly
+};
+
+// Export the client as default and all individual methods
 export default client;

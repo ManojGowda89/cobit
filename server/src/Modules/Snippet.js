@@ -1,16 +1,28 @@
+/**
+ * Snippet Module - Handles CRUD operations for code snippets
+ * 
+ * Current Date and Time: 2025-08-29 09:38:18 (UTC)
+ * User: ManojGowda89
+ */
+
 import { Sequelize } from "sequelize";
 import Snippet from "../Modals/Snippet.js";
 import { set, get, del, connectRedis, default as client } from "../config/redisClient.js";
 
-// Connect to Redis
+// Connect to Redis (or in-memory cache)
 connectRedis();
 
 // --- Helper function to delete keys by pattern ---
 const delPattern = async (pattern) => {
   try {
-    const iter = client.scanIterator({ MATCH: pattern });
-    for await (const key of iter) {
-      await client.del(key);
+    if (client && client.scanIterator) {
+      const iter = client.scanIterator({ MATCH: pattern });
+      for await (const key of iter) {
+        await del(key);
+      }
+      console.log(`Cache keys matching '${pattern}' invalidated`);
+    } else {
+      console.log("Pattern deletion not available, skipping cache invalidation");
     }
   } catch (err) {
     console.error("Error deleting pattern keys:", err);

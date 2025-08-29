@@ -160,8 +160,8 @@ const SnippetList = ({ showToast }) => {
 
   const getCodePreview = (codeString) => {
     if (!codeString || typeof codeString !== 'string') return "No code available.";
-    const lines = codeString.split('\n').slice(0, 4).join('\n');
-    return lines + (codeString.split('\n').length > 4 ? '\n...' : '');
+    const lines = codeString.split('\n').slice(0, 8).join('\n');
+    return lines + (codeString.split('\n').length > 2 ? '\n...' : '');
   };
 
   return (

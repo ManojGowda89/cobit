@@ -1,13 +1,7 @@
 {
-  "id": "wuWYLdgRkJkBbBQO6ca",
-  "staged": [],
-  "commits": [
-    {
-      "id": 1756451705562,
-      "message": "server side caching",
-      "files": [
-        "serversidecaching.js"
-      ]
-    }
-  ]
+  "id": "p9Fd3LvIsP",
+  "staged": [
+    "server.js"
+  ],
+  "commits": []
 }
