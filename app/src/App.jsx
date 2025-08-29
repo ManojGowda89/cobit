@@ -15,6 +15,7 @@ import AddCodeForm from './Pages/AddCodeForm';
 import CLIInfo from './Pages/CLIInfo';
 import Toast from './Pages/Tost'; // Note: Typo in filename should be 'Toast.jsx'
 import SnippetDetail from './Pages/SnippetDetail';
+import AuthPage from './Pages/AuthPage';
 const theme = createTheme({
   palette: { /* ... your theme settings ... */ },
 });
@@ -42,6 +43,7 @@ function App() {
               <Route path="/snippets/:id" element={<SnippetDetail />} />
               <Route path="/add" element={<AddCodeForm showToast={showToast} />} />
               <Route path="/cli" element={<CLIInfo />} />
+              <Route path="/auth" element={<AuthPage />} />
             </Routes>
           </Container>
           <Footer />

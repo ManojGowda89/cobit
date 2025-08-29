@@ -60,7 +60,7 @@ const getSnippets = async (req, res) => {
       order: [["createdAt", "DESC"]],
       limit,
       offset,
-      attributes: { exclude: ["userInfo", "visibility"] },
+      attributes: { exclude: ["userInfo"] },
     });
 
     const response = {
@@ -96,10 +96,7 @@ const getSnippetById = async (req, res) => {
       return res.json(cached);
     }
 
-    const snippet = await Snippet.findByPk(id, {
-      attributes: { exclude: ["visibility"] },
-      raw: true,
-    });
+    const snippet = await Snippet.findByPk(id);
 
     if (!snippet) return res.status(404).json({ error: "Snippet not found" });
 
@@ -108,6 +105,7 @@ const getSnippetById = async (req, res) => {
       title: snippet.title,
       description: snippet.description,
       code: snippet.code,
+      visibility: snippet.visibility,
       username: snippet.userInfo?.username || "Guest",
       createdAt: snippet.createdAt,
       updatedAt: snippet.updatedAt,
@@ -124,9 +122,9 @@ const getSnippetById = async (req, res) => {
 
 // --- Create a new snippet ---
 const createSnippet = async (req, res) => {
-  const { title, description, code } = req.body;
+  const { title, description, code, visibility } = req.body;
   try {
-    const snippet = await Snippet.create({ title, description, code });
+    const snippet = await Snippet.create({ title, description, code, visibility });
     console.log("✅ Snippet created");
 
     // Invalidate relevant cache

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // 1. Import hooks
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   AppBar, 
   Toolbar, 
@@ -7,8 +7,6 @@ import {
   Box, 
   Button, 
   Container,
-  TextField,
-  InputAdornment,
   IconButton,
   Drawer,
   List,
@@ -22,25 +20,16 @@ import {
   List as ListIcon, 
   Add as AddIcon, 
   Terminal as TerminalIcon,
-  Search as SearchIcon,
   Menu as MenuIcon
 } from '@mui/icons-material';
 
-// 2. Remove currentView and onViewChange from props
 const Navbar = ({ isEditing }) => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  // 3. Get router location and navigate function
   const navigate = useNavigate();
   const location = useLocation();
-
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    // Implement debounced search function here
-  };
 
   const toggleDrawer = (open) => (event) => {
     if (
@@ -52,34 +41,33 @@ const Navbar = ({ isEditing }) => {
     setDrawerOpen(open);
   };
 
-  // 4. Add 'path' property to align with your routes in App.jsx
   const navItems = [
     { id: 'code', label: 'Code', icon: <ListIcon />, path: '/' },
     { id: 'add', label: 'Add Code', icon: <AddIcon />, path: '/add' },
-    { id: 'cli', label: 'CLI', icon: <TerminalIcon />, path: '/cli' }
+    { id: 'cli', label: 'CLI', icon: <TerminalIcon />, path: '/cli' },
+    { id: 'auth', label: 'Auth', icon: <TerminalIcon />, path: '/auth' }
   ];
 
   const renderNavButtons = () => (
     <>
       {navItems.map((item) => {
-        // 5. Check if the current URL pathname matches the item's path
         const isActive = location.pathname === item.path;
         return (
           <Button
             key={item.id}
             startIcon={item.icon}
-            // 6. Use isActive for styling
-            color={isActive ? 'success' : 'inherit'}
+            color="inherit"
             sx={{
               mx: 1,
-              borderRadius: 1,
-              backgroundColor: isActive ? 'success.main' : 'transparent',
-              color: isActive ? 'dark.main' : 'inherit',
+              borderRadius: 0,
+              borderBottom: isActive ? '2px solid' : '2px solid transparent',
+              borderColor: isActive ? 'success.main' : 'transparent',
               '&:hover': {
-                backgroundColor: isActive ? 'success.light' : 'rgba(255, 255, 255, 0.08)'
-              }
+                borderBottom: '2px solid',
+                borderColor: 'success.light',
+                backgroundColor: 'transparent',
+              },
             }}
-            // 7. Use navigate function on click
             onClick={() => navigate(item.path)}
           >
             {item.label}
@@ -90,7 +78,12 @@ const Navbar = ({ isEditing }) => {
   );
 
   const drawer = (
-    <Box sx={{ width: 250 }} role="presentation" onClick={toggleDrawer(false)} onKeyDown={toggleDrawer(false)}>
+    <Box
+      sx={{ width: 250 }}
+      role="presentation"
+      onClick={toggleDrawer(false)}
+      onKeyDown={toggleDrawer(false)}
+    >
       <List>
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -98,14 +91,11 @@ const Navbar = ({ isEditing }) => {
             <ListItem 
               button 
               key={item.id} 
-              // Use navigate here as well
               onClick={() => navigate(item.path)}
-              // Use isActive for selected state
-              selected={isActive}
               sx={{
-                borderRadius: 1,
+                borderBottom: isActive ? '2px solid' : '2px solid transparent',
+                borderColor: isActive ? 'success.main' : 'transparent',
                 m: 1,
-                backgroundColor: isActive ? 'success.light' : 'transparent',
               }}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
@@ -149,23 +139,6 @@ const Navbar = ({ isEditing }) => {
               <Box sx={{ display: 'flex', flexGrow: 1 }}>
                 {renderNavButtons()}
               </Box>
-            )}
-
-            {location.pathname === '/' && !isEditing && ( // Show search only on the main page
-              <TextField
-                size="small"
-                placeholder="Search by title or description"
-                value={searchQuery}
-                onChange={handleSearch}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ ml: 2, width: { xs: '100%', sm: 'auto' } }}
-              />
             )}
           </Toolbar>
         </Container>
