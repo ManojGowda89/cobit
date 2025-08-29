@@ -1,31 +1,22 @@
 // src/Pages/SnippetList.jsx
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Box, 
-  Typography, 
-  Alert, 
-  TextField,
-  Paper,
-  IconButton,
-  Chip,
-  Link,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Button,
-  Stack
+  Box, Typography, Alert, TextField, Paper, IconButton, Chip, 
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+  Button, Stack
 } from '@mui/material';
 import { Delete as DeleteIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { LoadingButton } from '@mui/lab';
+import ClientSideCache from "../../utils/ClientSideCach"; // caching module
 
 const API_URL = "/api/snippets";
 const SNIPPETS_PER_PAGE = 10;
 
 const SnippetList = ({ showToast }) => {
+  const navigate = useNavigate();
+
   const [snippets, setSnippets] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -43,21 +34,34 @@ const SnippetList = ({ showToast }) => {
   const abortControllerRef = useRef(null);
   const isInitialMount = useRef(true);
 
-  // Fetch snippets
-  const fetchSnippets = useCallback(async (page = 1) => {
+  // --- Fetch snippets with caching ---
+  const fetchSnippets = useCallback(async (page = 1, forceRefresh = false) => {
     setIsLoading(true);
     if (page === 1) setIsRefreshing(true);
 
-    // Cancel previous request
     if (abortControllerRef.current) abortControllerRef.current.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    const cacheKey = `snippets-page-${page}-search-${searchQuery || 'all'}`;
+
     try {
-      let url = `${API_URL}?page=${page}&limit=${SNIPPETS_PER_PAGE}`;
-      if (searchQuery) {
-        url += `&search=${encodeURIComponent(searchQuery)}`;
+      // Check cache first
+      if (!forceRefresh) {
+        const cachedData = ClientSideCache.get(cacheKey);
+        if (cachedData) {
+          setSnippets(prev => (page === 1 ? cachedData.snippets : [...prev, ...cachedData.snippets]));
+          setCurrentPage(cachedData.pagination.page);
+          setHasMore(cachedData.pagination.hasMore);
+          setIsLoading(false);
+          setIsRefreshing(false);
+          return;
+        }
       }
+
+      // Fetch from API
+      let url = `${API_URL}?page=${page}&limit=${SNIPPETS_PER_PAGE}`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
 
       const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
@@ -66,6 +70,9 @@ const SnippetList = ({ showToast }) => {
       setSnippets(prev => (page === 1 ? data.snippets : [...prev, ...data.snippets]));
       setCurrentPage(data.pagination.page);
       setHasMore(data.pagination.hasMore);
+
+      ClientSideCache.set(cacheKey, data); // Save to cache
+
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Error fetching snippets:', err);
@@ -77,7 +84,7 @@ const SnippetList = ({ showToast }) => {
     }
   }, [searchQuery, showToast]);
 
-  // Initial fetch & search
+  // --- Initial fetch & search ---
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -95,9 +102,9 @@ const SnippetList = ({ showToast }) => {
     return () => clearTimeout(searchTimeoutRef.current);
   }, [searchQuery, fetchSnippets]);
 
-  // Infinite scroll
+  // --- Infinite scroll ---
   const lastSnippetElementRef = useCallback(node => {
-    if (isLoading || isRefreshing) return; // disable while refreshing
+    if (isLoading || isRefreshing) return;
     if (observer.current) observer.current.disconnect();
 
     observer.current = new IntersectionObserver(entries => {
@@ -109,37 +116,21 @@ const SnippetList = ({ showToast }) => {
     if (node) observer.current.observe(node);
   }, [isLoading, isRefreshing, hasMore, currentPage, fetchSnippets]);
 
-  // Delete countdown
+  // --- Delete countdown ---
   useEffect(() => {
     if (!deleteDialogOpen) return;
-
     if (countdown === 0) {
       confirmDeleteSnippet();
       return;
     }
-
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [deleteDialogOpen, countdown]);
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
-
-  const handleRefresh = () => {
-    setSnippets([]);
-    setCurrentPage(1);
-    fetchSnippets(1);
-  };
-
-  const openDeleteDialog = (id) => {
-    setSnippetToDelete(id);
-    setCountdown(5);
-    setDeleteDialogOpen(true);
-  };
-
-  const closeDeleteDialog = () => {
-    setSnippetToDelete(null);
-    setDeleteDialogOpen(false);
-  };
+  const handleRefresh = () => fetchSnippets(1, true); // force refresh
+  const openDeleteDialog = (id) => { setSnippetToDelete(id); setCountdown(5); setDeleteDialogOpen(true); };
+  const closeDeleteDialog = () => { setSnippetToDelete(null); setDeleteDialogOpen(false); };
 
   const confirmDeleteSnippet = async () => {
     if (!snippetToDelete || isDeleting) return;
@@ -150,6 +141,14 @@ const SnippetList = ({ showToast }) => {
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       setSnippets(prev => prev.filter(s => s.id !== snippetToDelete));
       showToast('Snippet deleted successfully');
+
+      // Remove cached pages
+      const pages = Math.ceil(snippets.length / SNIPPETS_PER_PAGE);
+      for (let p = 1; p <= pages; p++) {
+        const cacheKey = `snippets-page-${p}-search-${searchQuery || 'all'}`;
+        ClientSideCache.del(cacheKey);
+      }
+
     } catch (err) {
       console.error('Error deleting snippet:', err);
       showToast('Error deleting snippet. Please try again.');
@@ -175,63 +174,50 @@ const SnippetList = ({ showToast }) => {
           onChange={handleSearchChange}
           InputProps={{ startAdornment: (<Box component="span" sx={{ mr: 1 }}>🔍</Box>) }}
         />
-        <LoadingButton
-          variant="outlined"
-          loading={isRefreshing}
-          onClick={handleRefresh}
-          startIcon={<RefreshIcon />}
-        >
+        <LoadingButton variant="outlined" loading={isRefreshing} onClick={handleRefresh} startIcon={<RefreshIcon />}>
           Refresh
         </LoadingButton>
       </Stack>
 
       {snippets.map((snippet, index) => {
         const handleDeleteClick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+          e.stopPropagation(); // prevent navigation
           openDeleteDialog(snippet.id);
         };
 
         return (
           <div key={snippet.id} ref={snippets.length === index + 1 ? lastSnippetElementRef : null}>
-            <Link component={RouterLink} to={`/snippets/${snippet.id}`} underline="none">
-              <Paper 
-                elevation={3} 
-                sx={{ p: 3, mb: 3, transition: 'all 0.3s ease', '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' } }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="h6" component="h3" color="primary.main">{snippet.title}</Typography>
-                  <Chip label={snippet.id} size="small" />
-                </Box>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3, mb: 3, cursor: 'pointer',
+                transition: 'all 0.3s ease', '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' }
+              }}
+              onClick={() => navigate(`/snippets/${snippet.id}`)}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h6" component="h3" color="primary.main">{snippet.title}</Typography>
+                <Chip label={snippet.id} size="small" />
+              </Box>
 
-                <Typography color="text.secondary" sx={{ mb: 2, height: '40px', overflow: 'hidden' }}>
-                  {snippet.description}
-                </Typography>
+              <Typography color="text.secondary" sx={{ mb: 2, height: '40px', overflow: 'hidden' }}>
+                {snippet.description}
+              </Typography>
 
-                <Typography component="pre" sx={{
-                  bgcolor: 'grey.100',
-                  p: 1.5,
-                  borderRadius: 1,
-                  fontFamily: 'monospace',
-                  fontSize: '0.8rem',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                  maxHeight: '100px',
-                  overflow: 'hidden',
-                  mt: 2,
-                  mb: 1,
-                  color: 'text.primary'
-                }}>
-                  {getCodePreview(snippet.code)}
-                </Typography>
+              <Typography component="pre" sx={{
+                bgcolor: 'grey.100', p: 1.5, borderRadius: 1, fontFamily: 'monospace',
+                fontSize: '0.8rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                maxHeight: '100px', overflow: 'hidden', mt: 2, mb: 1, color: 'text.primary'
+              }}>
+                {getCodePreview(snippet.code)}
+              </Typography>
 
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <IconButton color="error" size="small" onClick={handleDeleteClick} title="Delete Snippet">
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              </Paper>
-            </Link>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <IconButton color="error" size="small" onClick={handleDeleteClick} title="Delete Snippet">
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            </Paper>
           </div>
         );
       })}
