@@ -1,63 +1,54 @@
-// redisClient.js
-import { createClient } from "redis";
+const fs = require('fs');
+const path = require('path');
 
-const REDIS_URL =
-  process.env.NODE_ENV === "production"
-    ? process.env.PROD_REDIS_URL
-    : process.env.LOCAL_REDIS_URL || "redis://localhost:6379";
+const COBIT_FILE = path.join(process.cwd(), '.cobit');
 
-const client = createClient({
-  url: REDIS_URL,
-});
+function getApiBase() {
+  // Allow override with env; default to your prod domain
+  return process.env.COBIT_API_BASE || 'http://localhost:3000';
+}
 
-client.on("error", (err) => console.error("Redis Client Error", err));
+function getSnippetUrl(id) {
+  const base = getApiBase().replace(/\/+$/, '');
+  return `${base}/api/snippets${id ? '/' + id : ''}`;
+}
 
-/**
- * Connect to Redis
- */
-export const connectRedis = async () => {
-  if (!client.isOpen) {
-    await client.connect();
-    console.log("✅ Connected to Redis");
-  }
-};
-
-/**
- * Set key-value with 1-hour expiry
- * Automatically converts objects to JSON
- * @param {string} key 
- * @param {string|object} value 
- */
-export const set = async (key, value) => {
-  const val = typeof value === "object" ? JSON.stringify(value) : value;
-  await client.set(key, val, { EX: 3600 }); // 1 hour expiry
-};
-
-/**
- * Get value by key
- * Automatically parses JSON objects
- * @param {string} key 
- */
-export const get = async (key) => {
-  const val = await client.get(key);
-  if (!val) return null;
-
+function readCobitFile() {
+  if (!fs.existsSync(COBIT_FILE)) return null;
+  const raw = fs.readFileSync(COBIT_FILE, 'utf-8');
   try {
-    return JSON.parse(val);
+    return JSON.parse(raw);
   } catch {
-    return val;
+    return null;
   }
-};
+}
 
-/**
- * Delete a key
- * @param {string} key 
- */
-export const del = async (key) => {
-  await client.del(key);
-};
+function writeCobitFile(data) {
+  fs.writeFileSync(COBIT_FILE, JSON.stringify(data, null, 2));
+}
 
-/**
- * Export the raw client if needed
- */
-export default client;
+function ensureRepoOrExit() {
+  const c = readCobitFile();
+  if (!c) {
+    console.log('❌ No Cobit repo found. Run `cobit init` first.');
+    process.exit(1);
+  }
+  return c;
+}
+
+function fileExistsOrExit(filename) {
+  if (!fs.existsSync(filename)) {
+    console.log(`❌ File not found: ${filename}`);
+    process.exit(1);
+  }
+}
+
+module.exports = {
+  COBIT_FILE,
+  getApiBase,
+  getSnippetUrl,
+  readCobitFile,
+  writeCobitFile,
+  ensureRepoOrExit,
+  fileExistsOrExit
+};
