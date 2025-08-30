@@ -25,7 +25,7 @@ function promptCredentials() {
 // Function to check if token exists and is valid
 async function verifyToken(token) {
   try {
-    const res = await axios.get('http://localhost:3000/api/verify', {
+    const res = await axios.get('https://cobit.manojgowda.in/api/verify', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -43,7 +43,7 @@ async function login() {
   try {
     const { email, password } = await promptCredentials();
     const authString = Buffer.from(`${email}:${password}`).toString('base64');
-    const res = await axios.get('http://localhost:3000/api/login', {
+    const res = await axios.get('https://cobit.manojgowda.in/api/login', {
       headers: {
         'Authorization': `Basic ${authString}`
       }
